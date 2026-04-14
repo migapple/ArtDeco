@@ -1,0 +1,1422 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Art Déco · Monde</title>
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Josefin+Sans:wght@300;400;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/>
+
+<style>
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --gold: #c9a84c;
+  --gold2: #e8c96a;
+  --gold-dim: #7a6130;
+  --ink: #0a0806;
+  --ink2: #120f0a;
+  --ink3: #1e1810;
+  --cream: #f0e6c8;
+  --cream2: #d4c49a;
+  --text: #e8dfc8;
+  --muted: #8a7d62;
+  --tab-h: 62px;
+  --header-h: 56px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: 'Josefin Sans', 'Helvetica Neue', sans-serif;
+  background: var(--ink);
+  color: var(--text);
+  overscroll-behavior: none;
+  user-select: none;
+}
+
+/* ═══════════════ SHELL ═══════════════ */
+#app {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  display: flex; flex-direction: column;
+  padding-top: var(--safe-top);
+  background: var(--ink);
+}
+
+/* ═══════════════ HEADER ═══════════════ */
+#header {
+  height: var(--header-h);
+  background: var(--ink2);
+  border-bottom: 1px solid var(--gold-dim);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px;
+  flex-shrink: 0;
+  position: relative;
+}
+#header::after {
+  content: '';
+  position: absolute; bottom: -3px; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+.header-title {
+  display: flex; flex-direction: column; align-items: center;
+  position: absolute; left: 50%; transform: translateX(-50%);
+}
+.header-title .main {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 15px; font-weight: 600; letter-spacing: 4px; text-transform: uppercase;
+  color: var(--gold);
+}
+.header-title .sub {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 11px; letter-spacing: 2px; color: var(--muted); font-style: italic;
+}
+
+.header-btn {
+  width: 36px; height: 36px; border: none; background: none;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; border-radius: 50%; transition: background .2s;
+  color: var(--gold); font-size: 18px;
+}
+.header-btn:active { background: rgba(201,168,76,.15); }
+
+/* ═══════════════ CONTENT ═══════════════ */
+#content {
+  flex: 1; overflow: hidden; position: relative;
+}
+
+.tab-panel {
+  position: absolute; inset: 0;
+  display: none; flex-direction: column;
+  overflow: hidden;
+}
+.tab-panel.active { display: flex; }
+
+/* ═══════════════ LISTE ═══════════════ */
+#list-container {
+  flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 8px 0 8px;
+}
+
+/* Filtre continent */
+#filter-bar {
+  display: flex; gap: 6px; padding: 10px 14px 6px; overflow-x: auto;
+  -webkit-overflow-scrolling: touch; flex-shrink: 0;
+  scrollbar-width: none;
+}
+#filter-bar::-webkit-scrollbar { display: none; }
+
+.filter-chip {
+  border: 1px solid var(--gold-dim);
+  background: transparent; color: var(--muted);
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 5px 12px; border-radius: 2px; white-space: nowrap;
+  cursor: pointer; transition: all .2s; flex-shrink: 0;
+}
+.filter-chip.active {
+  background: var(--gold); color: var(--ink); border-color: var(--gold);
+  font-weight: 600;
+}
+
+.building-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 13px 16px;
+  border-bottom: 1px solid rgba(201,168,76,.12);
+  cursor: pointer; transition: background .15s;
+  position: relative;
+}
+.building-card:active { background: rgba(201,168,76,.07); }
+
+.card-img {
+  width: 68px; height: 68px; border-radius: 2px;
+  object-fit: cover; background: var(--ink3);
+  flex-shrink: 0; border: 1px solid var(--gold-dim);
+}
+.card-img-placeholder {
+  width: 68px; height: 68px; border-radius: 2px; flex-shrink: 0;
+  background: var(--ink3); border: 1px solid var(--gold-dim);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px;
+}
+
+.card-info { flex: 1; min-width: 0; }
+.card-name {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 14px; font-weight: 600; letter-spacing: .5px;
+  color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.card-city {
+  font-size: 12px; color: var(--gold); letter-spacing: 1px; margin-top: 2px;
+}
+.card-year {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 11px; color: var(--muted); margin-top: 3px; letter-spacing: .5px;
+}
+.card-chevron { color: var(--gold-dim); font-size: 14px; flex-shrink: 0; }
+
+/* ═══════════════ DETAIL OVERLAY ═══════════════ */
+#detail-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: var(--ink);
+  transform: translateX(100%);
+  transition: transform .3s cubic-bezier(.4,0,.2,1);
+  display: flex; flex-direction: column;
+  padding-top: var(--safe-top);
+}
+#detail-overlay.open { transform: translateX(0); }
+
+#detail-header {
+  height: var(--header-h);
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 16px; border-bottom: 1px solid var(--gold-dim);
+  flex-shrink: 0; background: var(--ink2);
+}
+#detail-back {
+  width: 36px; height: 36px; border: none; background: none;
+  color: var(--gold); font-size: 22px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+#detail-title {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 14px; letter-spacing: 2px; color: var(--gold); text-transform: uppercase;
+  flex: 1; text-align: center;
+}
+#detail-spacer { width: 36px; }
+
+#detail-scroll {
+  flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+}
+
+#detail-hero {
+  width: 100%; aspect-ratio: 4/3; object-fit: cover;
+  background: var(--ink3); display: block;
+}
+#detail-hero-placeholder {
+  width: 100%; aspect-ratio: 4/3;
+  background: var(--ink3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 72px;
+}
+
+.detail-body { padding: 20px 18px 32px; }
+
+.detail-building-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 28px; font-weight: 600; color: var(--cream);
+  line-height: 1.2; margin-bottom: 4px;
+}
+.detail-location {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 12px; letter-spacing: 2px; color: var(--gold);
+  text-transform: uppercase; margin-bottom: 16px;
+}
+
+.detail-meta-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 10px; margin-bottom: 20px;
+}
+.meta-item {
+  background: var(--ink3); border: 1px solid rgba(201,168,76,.2);
+  border-radius: 2px; padding: 10px 12px;
+}
+.meta-label {
+  font-size: 9px; letter-spacing: 2px; color: var(--muted);
+  text-transform: uppercase; margin-bottom: 3px;
+}
+.meta-value {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 16px; color: var(--cream);
+}
+
+.detail-divider {
+  height: 1px; margin: 18px 0;
+  background: linear-gradient(90deg, var(--gold-dim), transparent);
+}
+
+.detail-desc {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 17px; line-height: 1.7; color: var(--cream2);
+}
+
+.wiki-btn {
+  margin-top: 22px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  border: 1px solid var(--gold-dim); border-radius: 2px; padding: 13px;
+  color: var(--gold); background: transparent; width: 100%; cursor: pointer;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+  transition: background .2s;
+}
+.wiki-btn:active { background: rgba(201,168,76,.1); }
+
+/* ═══════════════ CARTE ═══════════════ */
+#map { flex: 1; }
+
+/* ═══════════════ QUIZ ═══════════════ */
+#quiz-panel {
+  flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 20px 16px;
+}
+
+.quiz-score-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px;
+}
+.quiz-score-label {
+  font-size: 11px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase;
+}
+.quiz-score-num {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 24px; color: var(--gold);
+}
+.quiz-progress {
+  height: 2px; background: var(--ink3); border-radius: 1px; margin-bottom: 24px;
+}
+.quiz-progress-fill {
+  height: 100%; background: var(--gold); border-radius: 1px; transition: width .4s;
+}
+
+.quiz-question-img {
+  width: 100%; aspect-ratio: 16/9; object-fit: cover;
+  border-radius: 2px; border: 1px solid var(--gold-dim);
+  background: var(--ink3); margin-bottom: 16px;
+}
+.quiz-question-img-placeholder {
+  width: 100%; aspect-ratio: 16/9;
+  background: var(--ink3); border: 1px solid var(--gold-dim);
+  border-radius: 2px; margin-bottom: 16px;
+  display: flex; align-items: center; justify-content: center; font-size: 52px;
+}
+
+.quiz-question {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 13px; letter-spacing: 1.5px; color: var(--muted);
+  text-transform: uppercase; margin-bottom: 8px;
+}
+.quiz-hint {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 16px; color: var(--cream2); margin-bottom: 20px; line-height: 1.4;
+}
+
+.quiz-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+.quiz-option {
+  border: 1px solid rgba(201,168,76,.3); border-radius: 2px; padding: 14px 16px;
+  background: transparent; color: var(--text); text-align: left; cursor: pointer;
+  font-family: 'Josefin Sans', sans-serif; font-size: 13px; letter-spacing: .5px;
+  transition: all .2s;
+}
+.quiz-option:active { transform: scale(.98); }
+.quiz-option.correct { background: rgba(100,180,80,.2); border-color: #64b450; color: #8be077; }
+.quiz-option.wrong { background: rgba(180,60,60,.2); border-color: #b43c3c; color: #e07777; }
+
+.quiz-next-btn {
+  width: 100%; padding: 15px; border: 1px solid var(--gold);
+  background: rgba(201,168,76,.1); color: var(--gold);
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 12px; letter-spacing: 3px; text-transform: uppercase;
+  border-radius: 2px; cursor: pointer; transition: background .2s; display: none;
+}
+.quiz-next-btn:active { background: rgba(201,168,76,.25); }
+.quiz-next-btn.visible { display: block; }
+
+.quiz-result {
+  display: none; text-align: center; padding: 40px 20px;
+}
+.quiz-result.visible { display: block; }
+.quiz-result-emoji { font-size: 64px; margin-bottom: 16px; }
+.quiz-result-score {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 48px; color: var(--gold); line-height: 1;
+}
+.quiz-result-label {
+  font-size: 11px; letter-spacing: 2px; color: var(--muted);
+  text-transform: uppercase; margin: 8px 0 24px;
+}
+.quiz-result-msg {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px; color: var(--cream2); margin-bottom: 28px;
+}
+.quiz-restart {
+  border: 1px solid var(--gold); background: transparent;
+  color: var(--gold); padding: 13px 32px;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 12px; letter-spacing: 3px; text-transform: uppercase;
+  border-radius: 2px; cursor: pointer;
+}
+
+/* ═══════════════ TAB BAR ═══════════════ */
+#tabbar {
+  height: calc(var(--tab-h) + var(--safe-bottom));
+  padding-bottom: var(--safe-bottom);
+  background: var(--ink2);
+  border-top: 1px solid var(--gold-dim);
+  display: flex; flex-shrink: 0;
+  position: relative;
+}
+#tabbar::before {
+  content: '';
+  position: absolute; top: -2px; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+.tab-btn {
+  flex: 1; border: none; background: none; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; transition: opacity .2s;
+}
+.tab-icon { font-size: 20px; }
+.tab-label {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--muted);
+}
+.tab-btn.active .tab-icon { filter: drop-shadow(0 0 4px var(--gold)); }
+.tab-btn.active .tab-label { color: var(--gold); }
+
+/* ═══════════════ SETTINGS ═══════════════ */
+#settings-overlay {
+  position: fixed; inset: 0; z-index: 300;
+  display: none; flex-direction: column;
+  padding-top: var(--safe-top);
+}
+#settings-overlay.open { display: flex; }
+
+#settings-backdrop {
+  position: absolute; inset: 0; background: rgba(0,0,0,.7);
+}
+
+#settings-panel {
+  position: relative; z-index: 1;
+  margin-top: auto;
+  background: var(--ink2);
+  border-top: 1px solid var(--gold-dim);
+  border-radius: 8px 8px 0 0;
+  padding-bottom: var(--safe-bottom);
+  display: flex; flex-direction: column;
+  max-height: 70vh;
+}
+.settings-header {
+  padding: 18px 20px 12px;
+  border-bottom: 1px solid rgba(201,168,76,.2);
+  display: flex; justify-content: space-between; align-items: center;
+  flex-shrink: 0;
+}
+.settings-title {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 11px; letter-spacing: 3px; color: var(--gold); text-transform: uppercase;
+}
+.settings-close-btn {
+  font-size: 20px; color: var(--muted); background: none; border: none; cursor: pointer;
+}
+.settings-content { overflow-y: auto; padding: 16px 20px; }
+.settings-section-title {
+  font-size: 9px; letter-spacing: 2px; color: var(--muted);
+  text-transform: uppercase; margin-bottom: 12px; margin-top: 4px;
+}
+.settings-app-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid rgba(201,168,76,.08);
+  cursor: pointer;
+}
+.settings-app-icon {
+  width: 40px; height: 40px; border-radius: 8px; background: var(--ink3);
+  border: 1px solid var(--gold-dim); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 20px;
+}
+.settings-app-name {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 13px; color: var(--cream);
+}
+.settings-app-store {
+  font-size: 10px; color: var(--muted); letter-spacing: 1px;
+}
+
+/* ═══════════════ LANG TOGGLE ═══════════════ */
+#lang-btn {
+  font-size: 20px; cursor: pointer;
+}
+
+/* Leaflet popup dark */
+.leaflet-popup-content-wrapper {
+  background: var(--ink2) !important; border: 1px solid var(--gold-dim) !important;
+  border-radius: 2px !important; color: var(--text) !important;
+}
+.leaflet-popup-tip { background: var(--ink2) !important; }
+.leaflet-popup-content { font-family: 'Josefin Sans', sans-serif; font-size: 12px !important; }
+.popup-name { color: var(--gold); font-weight: 600; letter-spacing: .5px; margin-bottom: 2px; }
+.popup-sub { color: var(--muted); font-size: 11px; }
+.popup-link { color: var(--gold2); font-size: 11px; cursor: pointer; margin-top: 4px; display: inline-block; }
+
+/* Spinner */
+.spinner {
+  width: 20px; height: 20px; border: 2px solid var(--gold-dim);
+  border-top-color: var(--gold); border-radius: 50%;
+  animation: spin .8s linear infinite;
+  margin: 40px auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Geometric deco motif header */
+.deco-bar {
+  display: flex; align-items: center; gap: 8px; padding: 0 16px; height: 24px;
+  background: linear-gradient(90deg, var(--ink), rgba(201,168,76,.08), var(--ink));
+  flex-shrink: 0;
+}
+.deco-line { flex: 1; height: 1px; background: rgba(201,168,76,.2); }
+.deco-diamond {
+  width: 6px; height: 6px; background: var(--gold-dim);
+  transform: rotate(45deg); flex-shrink: 0;
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <div id="header">
+    <button class="header-btn" id="lang-btn" onclick="toggleLang()">🇬🇧</button>
+    <div class="header-title">
+      <span class="main" id="header-main">Art Déco</span>
+      <span class="sub" id="header-sub">Monuments du Monde</span>
+    </div>
+    <button class="header-btn" onclick="openSettings()">⚙️</button>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="content">
+
+    <!-- LISTE -->
+    <div id="panel-liste" class="tab-panel active">
+      <div id="filter-bar"></div>
+      <div class="deco-bar"><div class="deco-line"></div><div class="deco-diamond"></div><div class="deco-line"></div></div>
+      <div id="list-container"></div>
+    </div>
+
+    <!-- CARTE -->
+    <div id="panel-carte" class="tab-panel">
+      <div id="map"></div>
+    </div>
+
+    <!-- QUIZ -->
+    <div id="panel-quiz" class="tab-panel">
+      <div id="quiz-panel"></div>
+    </div>
+
+  </div>
+
+  <!-- TAB BAR -->
+  <div id="tabbar">
+    <button class="tab-btn active" id="tab-liste" onclick="switchTab('liste')">
+      <span class="tab-icon">🏛️</span>
+      <span class="tab-label" data-fr="Liste" data-en="List">Liste</span>
+    </button>
+    <button class="tab-btn" id="tab-carte" onclick="switchTab('carte')">
+      <span class="tab-icon">🗺️</span>
+      <span class="tab-label" data-fr="Carte" data-en="Map">Carte</span>
+    </button>
+    <button class="tab-btn" id="tab-quiz" onclick="switchTab('quiz')">
+      <span class="tab-icon">❓</span>
+      <span class="tab-label" data-fr="Quiz" data-en="Quiz">Quiz</span>
+    </button>
+  </div>
+</div>
+
+<!-- DETAIL OVERLAY -->
+<div id="detail-overlay">
+  <div id="detail-header">
+    <button id="detail-back" onclick="closeDetail()">‹</button>
+    <div id="detail-title"></div>
+    <div id="detail-spacer"></div>
+  </div>
+  <div id="detail-scroll">
+    <div id="detail-hero-wrap"></div>
+    <div class="detail-body" id="detail-body"></div>
+  </div>
+</div>
+
+<!-- SETTINGS OVERLAY -->
+<div id="settings-overlay">
+  <div id="settings-backdrop" onclick="closeSettings()"></div>
+  <div id="settings-panel">
+    <div class="settings-header">
+      <span class="settings-title" id="set-title">Réglages</span>
+      <button class="settings-close-btn" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="settings-content" id="settings-content"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ═══════════════ CONFIG ═══════════════
+const MGA_CONFIG = {
+  appCourante: 'artdeco',
+  apps: [
+    { id:'rois',    icon:'👑', fr:'Rois de France',         en:'Kings of France',           store:'https://apps.apple.com/app/id6761323546' },
+    { id:'pres',    icon:'🎖️', fr:'Présidents de la Rép.',  en:'Presidents of France',       store:'https://apps.apple.com/app/id6761424444' },
+    { id:'senat',   icon:'⚖️', fr:'Présidents du Sénat',    en:'Senate Presidents',          store:'https://apps.apple.com/app/id6764000000' },
+    { id:'academie',icon:'📜', fr:'Académie française',     en:'Académie française',         store:'https://apps.apple.com/app/id6761334922' },
+    { id:'chateaux',icon:'🏰', fr:'Châteaux de la Loire',   en:'Loire Valley Castles',       store:'https://apps.apple.com/app/id6761000000' },
+    { id:'theatres',icon:'🎭', fr:'Théâtres de Paris',      en:'Paris Theatres',             store:'https://apps.apple.com/app/id6760929391' },
+    { id:'musees',  icon:'🎨', fr:'Musées de Paris',        en:'Paris Museums',              store:'https://apps.apple.com/app/id6760890465' },
+  ]
+};
+
+// ═══════════════ LANG ═══════════════
+let lang = localStorage.getItem('artdeco_lang') || 'fr';
+function t(obj) { return (typeof obj === 'string') ? obj : (obj[lang] || obj.fr); }
+function toggleLang() {
+  lang = (lang === 'fr') ? 'en' : 'fr';
+  localStorage.setItem('artdeco_lang', lang);
+  document.getElementById('lang-btn').textContent = lang === 'fr' ? '🇬🇧' : '🇫🇷';
+  applyLang();
+  renderList();
+  if (currentDetail !== null) openDetail(currentDetail);
+}
+function applyLang() {
+  document.getElementById('header-sub').textContent = lang === 'fr' ? 'Monuments du Monde' : 'World Monuments';
+  document.getElementById('set-title').textContent = lang === 'fr' ? 'Réglages' : 'Settings';
+  document.querySelectorAll('[data-fr]').forEach(el => {
+    el.textContent = el.dataset[lang] || el.dataset.fr;
+  });
+  document.getElementById('lang-btn').textContent = lang === 'fr' ? '🇬🇧' : '🇫🇷';
+}
+
+// ═══════════════ DATA ═══════════════
+const BUILDINGS = [
+  // ── ÉTATS-UNIS ──
+  {
+    id:1, emoji:'🗽', continent:'americas',
+    name:{ fr:'Chrysler Building', en:'Chrysler Building' },
+    city:{ fr:'New York', en:'New York' }, country:{ fr:'États-Unis', en:'United States' },
+    year:1930, archi:'William Van Alen', height:'319 m',
+    lat:40.7516, lng:-73.9755,
+    wiki:'Chrysler_Building', commonsImg:'Chrysler_Building_by_David_Shankbone_edited.jpg', wikiFallback:['Chrysler_Building,_New_York_City'],
+    commonsImg:'Chrysler_Building_by_David_Shankbone_edited.jpg',
+    desc:{
+      fr:"Chef-d'œuvre de l'Art Déco américain, le Chrysler Building fut brièvement le plus haut bâtiment du monde à son inauguration en 1930. Sa couronne en acier inoxydable, ornée d'aigles et de frises d'inspiration automobile, reste l'une des silhouettes les plus reconnaissables du skyline new-yorkais.",
+      en:"A masterpiece of American Art Deco, the Chrysler Building was briefly the tallest building in the world upon its completion in 1930. Its stainless steel crown, adorned with eagles and automotive-inspired friezes, remains one of the most recognizable silhouettes on the New York skyline."
+    }
+  },
+  {
+    id:2, emoji:'🏙️', continent:'americas',
+    name:{ fr:'Empire State Building', en:'Empire State Building' },
+    city:{ fr:'New York', en:'New York' }, country:{ fr:'États-Unis', en:'United States' },
+    year:1931, archi:'Shreve, Lamb & Harmon', height:'443 m',
+    lat:40.7484, lng:-73.9857,
+    wiki:'Empire_State_Building', commonsImg:'Empire_State_Building_(aerial_view).jpg',
+    commonsImg:'Empire_State_Building_(aerial_view).jpg',
+    desc:{
+      fr:"Symbole incontesté de New York et de l'ambition américaine, l'Empire State Building fut construit en seulement 410 jours. Sa silhouette en gradins caractéristique du style Art Déco s'illumine chaque nuit de couleurs changeantes, faisant de lui une icône mondiale de l'architecture du XXᵉ siècle.",
+      en:"The undisputed symbol of New York and American ambition, the Empire State Building was constructed in just 410 days. Its stepped silhouette, characteristic of Art Deco style, is illuminated nightly in changing colors, making it a global icon of 20th-century architecture."
+    }
+  },
+  {
+    id:3, emoji:'🎭', continent:'americas',
+    name:{ fr:'Radio City Music Hall', en:'Radio City Music Hall' },
+    city:{ fr:'New York', en:'New York' }, country:{ fr:'États-Unis', en:'United States' },
+    year:1932, archi:'Edward Durell Stone & Donald Deskey', height:null,
+    lat:40.7599, lng:-73.9799,
+    wiki:'Radio_City_Music_Hall',
+    desc:{
+      fr:"Joyau intérieur de l'Art Déco, Radio City Music Hall est la plus grande salle de spectacle intérieure du monde lors de son inauguration. Ses décors somptueux aux lignes géométriques, ses lustres monumentaux et ses peintures murales en font un temple de l'élégance américaine des années 1930.",
+      en:"An Art Deco interior jewel, Radio City Music Hall was the largest indoor theater in the world upon its opening. Its sumptuous geometric decor, monumental chandeliers and murals make it a temple of 1930s American elegance."
+    }
+  },
+  {
+    id:4, emoji:'🏗️', continent:'americas',
+    name:{ fr:'Guardian Building', en:'Guardian Building' },
+    city:{ fr:'Détroit', en:'Detroit' }, country:{ fr:'États-Unis', en:'United States' },
+    year:1929, archi:'Wirt Rowland', height:'144 m',
+    lat:42.3289, lng:-83.0452,
+    wiki:'Guardian_Building',
+    desc:{
+      fr:"Surnommé la \"Cathédrale du Commerce\", le Guardian Building de Détroit est l'un des plus beaux exemples d'Art Déco aux États-Unis. Son intérieur flamboyant mêle faïences émaillées, mosaïques colorées et marbres précieux dans une symphonie ornementale d'une richesse exceptionnelle.",
+      en:"Nicknamed the \"Cathedral of Finance\", Detroit's Guardian Building is one of the finest examples of Art Deco in the United States. Its flamboyant interior blends glazed tiles, colorful mosaics and precious marbles in an ornamental symphony of exceptional richness."
+    }
+  },
+  {
+    id:5, emoji:'🎪', continent:'americas',
+    name:{ fr:'Fisher Building', en:'Fisher Building' },
+    city:{ fr:'Détroit', en:'Detroit' }, country:{ fr:'États-Unis', en:'United States' },
+    year:1928, archi:'Albert Kahn', height:'141 m',
+    lat:42.3636, lng:-83.0804,
+    wiki:'Fisher_Building_(Detroit)', commonsImg:'FisherBuilding.jpg', wikiFallback:['Fisher_Building,_Detroit','Fisher_Building'],
+    commonsImg:'FisherBuilding.jpg',
+    desc:{
+      fr:"Conçu par Albert Kahn pour les frères Fisher, constructeurs de carrosseries automobiles, le Fisher Building est souvent surnommé la plus belle construction du Michigan. Son arcade intérieure en marbre, ses plafonds dorés et ses boutiques en font un mall de luxe d'une élégance Art Déco intemporelle.",
+      en:"Designed by Albert Kahn for the Fisher brothers, car body manufacturers, the Fisher Building is often called Michigan's most beautiful building. Its marble arcade, gilded ceilings and boutiques make it a luxury mall of timeless Art Deco elegance."
+    }
+  },
+  {
+    id:6, emoji:'🚂', continent:'americas',
+    name:{ fr:'Union Terminal', en:'Cincinnati Union Terminal' },
+    city:{ fr:'Cincinnati', en:'Cincinnati' }, country:{ fr:'États-Unis', en:'United States' },
+    year:1933, archi:'Fellheimer & Wagner', height:null,
+    lat:39.1092, lng:-84.5388,
+    wiki:'Cincinnati_Museum_Center_at_Union_Terminal',
+    desc:{
+      fr:"La grande rotonde de l'Union Terminal de Cincinnati, avec son demi-dôme caractéristique haut de 55 mètres, est l'une des expressions les plus pures de l'Art Déco ferroviaire américain. Ses mosaïques monumentales de Winold Reiss célèbrent l'histoire et l'industrie de la région.",
+      en:"The grand rotunda of Cincinnati Union Terminal, with its distinctive 55-meter half-dome, is one of the purest expressions of American railroad Art Deco. Its monumental mosaics by Winold Reiss celebrate the history and industry of the region."
+    }
+  },
+  {
+    id:7, emoji:'🌴', continent:'americas',
+    name:{ fr:'Eastern Columbia Building', en:'Eastern Columbia Building' },
+    city:{ fr:'Los Angeles', en:'Los Angeles' }, country:{ fr:'États-Unis', en:'United States' },
+    year:1930, archi:'Claud Beelman', height:'68 m',
+    lat:34.0432, lng:-118.2525,
+    wiki:'Eastern_Columbia_Building',
+    desc:{
+      fr:"Revêtu d'une céramique turquoise et or exceptionnelle, l'Eastern Columbia Building est la plus belle expression de l'Art Déco à Los Angeles. Sa tour-horloge et ses ornements dorés aux formes géométriques complexes en font un chef-d'œuvre de l'architecture commerciale californienne.",
+      en:"Clad in exceptional turquoise and gold terracotta, the Eastern Columbia Building is the finest expression of Art Deco in Los Angeles. Its clock tower and gold ornaments with complex geometric forms make it a masterpiece of California commercial architecture."
+    }
+  },
+  // ── CANADA ──
+  {
+    id:8, emoji:'🍁', continent:'americas',
+    name:{ fr:'Marine Building', en:'Marine Building' },
+    city:{ fr:'Vancouver', en:'Vancouver' }, country:{ fr:'Canada', en:'Canada' },
+    year:1930, archi:'McCarter & Nairne', height:'98 m',
+    lat:49.2866, lng:-123.1186,
+    wiki:'Marine_Building',
+    desc:{
+      fr:"Considéré comme le plus beau bâtiment Art Déco du Canada, le Marine Building à Vancouver rend hommage à l'histoire maritime de la ville. Sa façade est ornée d'une profusion de sculptures marines : crustacés, dauphins, navires à vapeur et motifs d'algues composent un décor marin exceptionnel.",
+      en:"Considered the finest Art Deco building in Canada, Vancouver's Marine Building pays homage to the city's maritime history. Its facade is adorned with a profusion of marine sculptures: crustaceans, dolphins, steamships and seaweed motifs compose an exceptional marine decor."
+    }
+  },
+  {
+    id:9, emoji:'🍁', continent:'americas',
+    name:{ fr:'Édifice Aldred', en:'Aldred Building' },
+    city:{ fr:'Montréal', en:'Montreal' }, country:{ fr:'Canada', en:'Canada' },
+    year:1931, archi:'Barott & Blackader', height:'90 m',
+    lat:45.5046, lng:-73.5614,
+    wiki:'Aldred_Building',
+    desc:{
+      fr:"L'Édifice Aldred de Montréal s'inspire ouvertement du Rockefeller Center new-yorkais avec sa silhouette en gradins caractéristique. Construit au cœur du Vieux-Montréal face à la place d'Armes, il dialogue avec la basilique Notre-Dame dans une confrontation stylistique saisissante entre modernité et tradition.",
+      en:"Montreal's Aldred Building openly draws inspiration from New York's Rockefeller Center with its characteristic stepped silhouette. Built in the heart of Old Montreal facing Place d'Armes, it engages in a striking stylistic dialogue with Notre-Dame Basilica between modernity and tradition."
+    }
+  },
+  // ── ARGENTINE ──
+  {
+    id:10, emoji:'🇦🇷', continent:'americas',
+    name:{ fr:'Édifice Kavanagh', en:'Kavanagh Building' },
+    city:{ fr:'Buenos Aires', en:'Buenos Aires' }, country:{ fr:'Argentine', en:'Argentina' },
+    year:1936, archi:'Sánchez, Lagos y de la Torre', height:'120 m',
+    lat:-34.5947, lng:-58.3742,
+    wiki:'Kavanagh_Building',
+    desc:{
+      fr:"À sa construction, l'Édifice Kavanagh était le plus haut bâtiment en béton armé du monde. Commandé par Corina Kavanagh, il s'élève en gradins progressifs depuis Plaza San Martín. Sa silhouette épurée aux lignes verticales affirmées représente la synthèse parfaite entre Art Déco et fonctionnalisme.",
+      en:"At its construction, the Kavanagh Building was the tallest reinforced concrete building in the world. Commissioned by Corina Kavanagh, it rises in progressive steps from Plaza San Martín. Its refined silhouette with strong vertical lines represents the perfect synthesis between Art Deco and functionalism."
+    }
+  },
+  // ── FRANCE ──
+  {
+    id:11, emoji:'🥐', continent:'europe',
+    name:{ fr:'Grand Rex', en:'Grand Rex' },
+    city:{ fr:'Paris', en:'Paris' }, country:{ fr:'France', en:'France' },
+    year:1932, archi:'Auguste Bluysen & John Eberson', height:null,
+    lat:48.8673, lng:2.3480,
+    wiki:'Grand_Rex',
+    desc:{
+      fr:"Inauguré en 1932, le Grand Rex est le plus grand cinéma d'Europe avec ses 2 650 sièges. Sa façade monumentale et sa salle décorée d'un faux ciel étoilé, de palmiers et de décors orientalisants créent une atmosphère féerique unique. Classé monument historique, il reste l'ambassadeur du luxe cinématographique à Paris.",
+      en:"Opened in 1932, the Grand Rex is Europe's largest cinema with 2,650 seats. Its monumental facade and auditorium decorated with a fake starry sky, palm trees and orientalist decor create a unique magical atmosphere. Listed as a historic monument, it remains the ambassador of cinematic luxury in Paris."
+    }
+  },
+  {
+    id:12, emoji:'🏛️', continent:'europe',
+    name:{ fr:'Palais de Chaillot', en:'Palais de Chaillot' },
+    city:{ fr:'Paris', en:'Paris' }, country:{ fr:'France', en:'France' },
+    year:1937, archi:'Carlu, Boileau & Azéma', height:null,
+    lat:48.8618, lng:2.2889,
+    wiki:'Palais_de_Chaillot',
+    desc:{
+      fr:"Construit pour l'Exposition universelle de 1937, le Palais de Chaillot offre depuis sa terrasse la plus célèbre vue sur la Tour Eiffel. Ses deux ailes incurvées encadrant le Trocadéro, ses sculptures monumentales et ses dorures illustrent la grandeur du style Art Déco tardif à la française.",
+      en:"Built for the 1937 World's Fair, the Palais de Chaillot offers from its terrace the most famous view of the Eiffel Tower. Its two curved wings framing the Trocadéro, its monumental sculptures and gilding illustrate the grandeur of the late French Art Deco style."
+    }
+  },
+  {
+    id:13, emoji:'🎨', continent:'europe',
+    name:{ fr:'Palais de la Porte Dorée', en:'Palais de la Porte Dorée' },
+    city:{ fr:'Paris', en:'Paris' }, country:{ fr:'France', en:'France' },
+    year:1931, archi:'Albert Laprade & Léon Jaussely', height:null,
+    lat:48.8334, lng:2.3976,
+    wiki:'Palais_de_la_Porte_Dor%C3%A9e',
+    desc:{
+      fr:"Conçu pour l'Exposition coloniale de 1931, le Palais de la Porte Dorée est un témoignage majeur de l'Art Déco français. Sa façade, entièrement sculptée de bas-reliefs représentant les productions des territoires d'outre-mer, constitue la plus grande façade sculptée de Paris. Il abrite aujourd'hui le Musée de l'Immigration.",
+      en:"Designed for the 1931 Colonial Exhibition, the Palais de la Porte Dorée is a major testament to French Art Deco. Its facade, entirely sculpted with bas-reliefs representing the productions of overseas territories, constitutes the largest sculpted facade in Paris. It now houses the Museum of Immigration."
+    }
+  },
+  {
+    id:14, emoji:'🏗️', continent:'europe',
+    name:{ fr:'Immeuble Molitor', en:'Molitor Building' },
+    city:{ fr:'Paris', en:'Paris' }, country:{ fr:'France', en:'France' },
+    year:1934, archi:'Moreux & Pollet', height:null,
+    lat:48.8453, lng:2.2563,
+    wiki:'Piscine_Molitor',
+    desc:{
+      fr:"La piscine Molitor, aujourd'hui transformée en hôtel de luxe, fut à son inauguration l'une des piscines les plus modernes et glamour d'Europe. Son architecture Art Déco aux façades blanches et aux verrières lumineuses en fit un lieu de villégiature mondain où le bikini fut présenté pour la première fois en 1946.",
+      en:"The Molitor pool, now transformed into a luxury hotel, was upon its opening one of the most modern and glamorous pools in Europe. Its Art Deco architecture with white facades and luminous glass roofs made it a fashionable resort where the bikini was first presented in 1946."
+    }
+  },
+  // ── ROYAUME-UNI ──
+  {
+    id:15, emoji:'🫖', continent:'europe',
+    name:{ fr:'Hoover Building', en:'Hoover Building' },
+    city:{ fr:'Londres', en:'London' }, country:{ fr:'Royaume-Uni', en:'United Kingdom' },
+    year:1933, archi:'Wallis, Gilbert and Partners', height:null,
+    lat:51.5366, lng:-0.3128,
+    wiki:'Hoover_Building',
+    desc:{
+      fr:"L'usine Hoover de Londres est considérée comme l'une des plus belles réalisations industrielles Art Déco d'Europe. Sa façade blanc éclatant ornée de détails polychromes verts et rouges contraste magnifiquement avec ses intérieurs de bureaux qui ont survécu presque intacts. Elle est aujourd'hui reconvertie en supermarché Tesco.",
+      en:"London's Hoover Factory is considered one of the finest Art Deco industrial buildings in Europe. Its brilliant white facade adorned with green and red polychrome details magnificently contrasts with its office interiors that have survived almost intact. It is now converted into a Tesco supermarket."
+    }
+  },
+  {
+    id:16, emoji:'🏭', continent:'europe',
+    name:{ fr:'Battersea Power Station', en:'Battersea Power Station' },
+    city:{ fr:'Londres', en:'London' }, country:{ fr:'Royaume-Uni', en:'United Kingdom' },
+    year:1933, archi:'Giles Gilbert Scott', height:'103 m',
+    lat:51.4817, lng:-0.1445,
+    wiki:'Battersea_Power_Station',
+    desc:{
+      fr:"Avec ses quatre cheminées iconiques visibles dans l'album Animals des Pink Floyd, la centrale de Battersea est la plus grande structure en briques d'Europe. Son intérieur Art Déco spectaculaire, avec sa salle de contrôle aux colonnes en marbre et ses boiseries précieuses, est aujourd'hui restauré en lieu de vie et de culture.",
+      en:"With its four iconic chimneys featured on Pink Floyd's Animals album cover, Battersea Power Station is Europe's largest brick structure. Its spectacular Art Deco interior, with its marble-columned control room and precious woodwork, has been restored as a vibrant cultural and living space."
+    }
+  },
+  {
+    id:17, emoji:'🏺', continent:'europe',
+    name:{ fr:'Palais d\'Eltham', en:'Eltham Palace' },
+    city:{ fr:'Londres', en:'London' }, country:{ fr:'Royaume-Uni', en:'United States' },
+    year:1936, archi:'Seely & Paget', height:null,
+    lat:51.4516, lng:0.0534,
+    wiki:'Eltham_Palace',
+    desc:{
+      fr:"Eltham Palace est une rarissime fusion entre un palais médiéval et une demeure Art Déco de luxe. Les milliardaires Stephen et Virginia Courtauld transformèrent l'ancienne résidence royale en résidence ultramoderne pour les années 1930, avec salles de bain en marbre, chauffage central et même un logement spécial pour leur lémur apprivoisé.",
+      en:"Eltham Palace is an extremely rare fusion between a medieval palace and a luxury Art Deco residence. Millionaires Stephen and Virginia Courtauld transformed the former royal residence into an ultra-modern home for the 1930s, with marble bathrooms, central heating and even special quarters for their pet lemur."
+    }
+  },
+  // ── ITALIE ──
+  {
+    id:18, emoji:'🇮🇹', continent:'europe',
+    name:{ fr:'Palazzo della Civiltà Italiana', en:'Palazzo della Civiltà Italiana' },
+    city:{ fr:'Rome', en:'Rome' }, country:{ fr:'Italie', en:'Italy' },
+    year:1943, archi:'Giovanni Guerrini, Ernesto La Padula & Mario Romano', height:'68 m',
+    lat:41.8272, lng:12.4649,
+    wiki:'Palazzo_della_Civilt%C3%A0_Italiana',
+    desc:{
+      fr:"Surnommé le \"Colisée carré\" pour ses arches répétitives sur six niveaux, le Palazzo della Civiltà Italiana est le monument emblématique du quartier EUR de Rome, conçu pour l'Exposition universelle de 1942 qui n'eut jamais lieu. Son esthétique rationaliste-Art Déco à la fois austère et grandiose est aujourd'hui le siège de Fendi.",
+      en:"Nicknamed the \"Square Colosseum\" for its repetitive arches on six levels, the Palazzo della Civiltà Italiana is the iconic monument of Rome's EUR district, designed for the 1942 World's Fair that never took place. Its austere yet grandiose rationalist-Art Deco aesthetic now houses the Fendi headquarters."
+    }
+  },
+  // ── AUSTRALIE ──
+  {
+    id:19, emoji:'🦘', continent:'oceania',
+    name:{ fr:'Manchester Unity Building', en:'Manchester Unity Building' },
+    city:{ fr:'Melbourne', en:'Melbourne' }, country:{ fr:'Australie', en:'Australia' },
+    year:1932, archi:'Dudley Leggatt', height:'53 m',
+    lat:-37.8143, lng:144.9644,
+    wiki:'Manchester_Unity_Building',
+    desc:{
+      fr:"Le Manchester Unity Building est sans doute le plus beau bâtiment Art Déco de Melbourne et l'un des plus remarquables d'Australie. Sa façade en terre cuite crème aux ornements gothico-Art Déco et sa tour d'angle caractéristique dominent Swanston Street. Son hall intérieur en marbre et ses boutiques originelles constituent un ensemble d'une grande cohérence stylistique.",
+      en:"The Manchester Unity Building is arguably Melbourne's finest Art Deco building and one of the most remarkable in Australia. Its cream terracotta facade with Gothic-Art Deco ornaments and its characteristic corner tower dominate Swanston Street. Its marble interior hall and original shops form a stylistically cohesive ensemble."
+    }
+  },
+  {
+    id:20, emoji:'🦘', continent:'oceania',
+    name:{ fr:'Grace Building', en:'Grace Building' },
+    city:{ fr:'Sydney', en:'Sydney' }, country:{ fr:'Australie', en:'Australia' },
+    year:1930, archi:'Morrow & Gordon', height:'53 m',
+    lat:-33.8676, lng:151.2074,
+    wiki:'Grace_Building,_Sydney',
+    desc:{
+      fr:"Le Grace Building de Sydney est l'un des immeubles de bureaux Art Déco les plus imposants d'Australie. Directement inspiré du Tribune Tower de Chicago, sa structure en gradins et ses ornements gothico-Art Déco en font une référence du style dans le Pacifique. Il abrite depuis 2019 le luxueux hôtel Grace.",
+      en:"Sydney's Grace Building is one of Australia's most imposing Art Deco office buildings. Directly inspired by Chicago's Tribune Tower, its stepped structure and Gothic-Art Deco ornaments make it a reference of the style in the Pacific. It has housed the luxury Hotel Grace since 2019."
+    }
+  },
+  // ── CHINE ──
+  {
+    id:21, emoji:'🐉', continent:'asia',
+    name:{ fr:'Peace Hotel (anciennement Cathay Hotel)', en:'Peace Hotel (former Cathay Hotel)' },
+    city:{ fr:'Shanghai', en:'Shanghai' }, country:{ fr:'Chine', en:'China' },
+    year:1929, archi:'Palmer & Turner', height:'77 m',
+    lat:31.2393, lng:121.4912,
+    wiki:'Peace_Hotel,_Shanghai',
+    desc:{
+      fr:"Le Cathay Hotel, aujourd'hui Peace Hotel, fut le plus luxueux hôtel d'Asie à son inauguration et le symbole de Shanghai cosmopolite des années 1930. Sa pyramide verte caractéristique domine le Bund. Le magnat Victor Sassoon, son commanditaire, y installa son penthouse au sommet. Il reste le joyau Art Déco du Bund de Shanghai.",
+      en:"The Cathay Hotel, now the Peace Hotel, was the most luxurious hotel in Asia at its opening and the symbol of cosmopolitan Shanghai in the 1930s. Its characteristic green pyramid dominates the Bund. Magnate Victor Sassoon, its sponsor, installed his penthouse at the top. It remains the Art Deco jewel of Shanghai's Bund."
+    }
+  },
+  {
+    id:22, emoji:'🐉', continent:'asia',
+    name:{ fr:'Broadway Mansions', en:'Broadway Mansions' },
+    city:{ fr:'Shanghai', en:'Shanghai' }, country:{ fr:'Chine', en:'China' },
+    year:1935, archi:'B.D.V. Fraser', height:'77 m',
+    lat:31.2455, lng:121.4895,
+    wiki:'Broadway_Mansions_Hotel', wikiFallback:['Broadway_Mansions','Broadway_Mansions,_Shanghai'],
+    desc:{
+      fr:"Les Broadway Mansions, avec leur silhouette massive en briques rouges qui s'élèvent au-dessus de la confluence du Suzhou Creek et de la rivière Huangpu, constituent l'un des repères les plus imposants du Bund nord de Shanghai. Leur style Art Déco à l'anglaise reflète l'influence britannique dans la concession internationale.",
+      en:"Broadway Mansions, with their massive red brick silhouette rising above the confluence of Suzhou Creek and the Huangpu River, constitute one of the most imposing landmarks of northern Shanghai's Bund. Their English Art Deco style reflects British influence in the International Settlement."
+    }
+  },
+  // ── INDE ──
+  {
+    id:23, emoji:'🕌', continent:'asia',
+    name:{ fr:'Eros Cinema', en:'Eros Cinema' },
+    city:{ fr:'Mumbai', en:'Mumbai' }, country:{ fr:'Inde', en:'India' },
+    year:1938, archi:'Sorabji Bhedwar', height:null,
+    lat:18.9252, lng:72.8266,
+    wiki:'Eros_Cinema_(Mumbai)', wikiFallback:['Eros_Cinema%2C_Mumbai','Eros_Cinema,_Mumbai'],
+    desc:{
+      fr:"L'Eros Cinema de Mumbai est l'un des joyaux de ce que les historiens appellent la \"Mumbai Art Deco\", classée au patrimoine mondial de l'UNESCO. Sa façade en grès aux ornements géométriques dorés mêle influences Art Déco occidentales et motifs indiens dans un style hybride remarquable qui caractérise toute la marine drive de Mumbai.",
+      en:"Mumbai's Eros Cinema is one of the jewels of what historians call \"Mumbai Art Deco\", listed as UNESCO World Heritage. Its sandstone facade with golden geometric ornaments blends Western Art Deco influences and Indian motifs in a remarkable hybrid style that characterizes all of Mumbai's Marine Drive."
+    }
+  },
+  // ── AFRIQUE DU SUD ──
+  {
+    id:24, emoji:'🌍', continent:'africa',
+    name:{ fr:'Mutual Heights', en:'Mutual Heights' },
+    city:{ fr:'Le Cap', en:'Cape Town' }, country:{ fr:'Afrique du Sud', en:'South Africa' },
+    year:1940, archi:'Parker & Forsyth', height:'91 m',
+    lat:-33.9253, lng:18.4232,
+    wiki:'Mutual_Heights', wikiFallback:['Mutual_Heights_Building','Mutual_Heights,_Cape_Town'],
+    desc:{
+      fr:"Mutual Heights est la plus haute structure d'Afrique subsaharienne lors de sa construction et l'expression la plus aboutie de l'Art Déco en Afrique du Sud. Son hall d'entrée somptueux en marbre, orné de bas-reliefs en bronze représentant l'économie et l'industrie du pays, est considéré comme l'un des intérieurs Art Déco les plus remarquables de l'hémisphère Sud.",
+      en:"Mutual Heights was the tallest structure in sub-Saharan Africa at its construction and the most accomplished expression of Art Deco in South Africa. Its sumptuous marble entrance hall, adorned with bronze bas-reliefs representing the country's economy and industry, is considered one of the most remarkable Art Deco interiors in the Southern Hemisphere."
+    }
+  },
+  // ── MEXIQUE ──
+  {
+    id:25, emoji:'🌮', continent:'americas',
+    name:{ fr:'Palacio de Bellas Artes', en:'Palace of Fine Arts' },
+    city:{ fr:'Mexico', en:'Mexico City' }, country:{ fr:'Mexique', en:'Mexico' },
+    year:1934, archi:'Adamo Boari & Federico Mariscal', height:null,
+    lat:19.4352, lng:-99.1413,
+    wiki:'Palace_of_Fine_Arts',
+    desc:{
+      fr:"Le Palacio de Bellas Artes est un chef-d'œuvre unique en son genre, alliant une enveloppe extérieure Art Nouveau en marbre blanc de Carrare à des intérieurs monumentaux Art Déco. Ses murales de Rivera, Orozco et Siqueiros et son rideau de scène en cristal Tiffany en font le temple de la culture mexicaine du XXᵉ siècle.",
+      en:"The Palace of Fine Arts is a one-of-a-kind masterpiece, combining an Art Nouveau exterior shell in white Carrara marble with monumental Art Deco interiors. Its murals by Rivera, Orozco and Siqueiros and its Tiffany crystal stage curtain make it the temple of 20th-century Mexican culture."
+    }
+  },
+  // ── NOUVELLE-ZÉLANDE ──
+  {
+    id:26, emoji:'🥝', continent:'oceania',
+    name:{ fr:'Napier · Capitale Art Déco', en:'Napier · Art Deco Capital' },
+    city:{ fr:'Napier', en:'Napier' }, country:{ fr:'Nouvelle-Zélande', en:'New Zealand' },
+    year:1933, archi:'Divers architectes', height:null,
+    lat:-39.4928, lng:176.9120,
+    wiki:'Napier,_New_Zealand',
+    desc:{
+      fr:"Après le séisme dévastateur de 1931, la ville de Napier fut entièrement reconstruite en seulement deux ans dans le style Art Déco le plus en vogue, créant l'une des villes Art Déco les plus homogènes au monde. Son centre-ville, classé au patrimoine de l'UNESCO, attire chaque année un festival Art Déco international célébré par des milliers de visiteurs.",
+      en:"After the devastating 1931 earthquake, the city of Napier was entirely rebuilt in just two years in the most fashionable Art Deco style, creating one of the most homogeneous Art Deco cities in the world. Its UNESCO-listed city center hosts an annual international Art Deco festival celebrated by thousands of visitors."
+    }
+  },
+  // ── BRÉSIL ──
+  {
+    id:27, emoji:'🇧🇷', continent:'americas',
+    name:{ fr:'Edificio Martinelli', en:'Martinelli Building' },
+    city:{ fr:'São Paulo', en:'São Paulo' }, country:{ fr:'Brésil', en:'Brazil' },
+    year:1929, archi:'William Fillinger', height:'130 m',
+    lat:-23.5460, lng:-46.6346,
+    wiki:'Martinelli_Building',
+    desc:{
+      fr:"Premier gratte-ciel de l'Amérique du Sud, l'Edificio Martinelli a longtemps dominé la skyline de São Paulo. Commandé par le comte Giuseppe Martinelli, immigrant italien devenu riche industriel, il affiche une silhouette élancée en gradins caractéristique du style Art Déco, avec une logia panoramique au sommet qui offre une vue imprenable sur la métropole.",
+      en:"South America's first skyscraper, the Martinelli Building long dominated São Paulo's skyline. Commissioned by Count Giuseppe Martinelli, an Italian immigrant turned wealthy industrialist, it displays a slender stepped silhouette characteristic of Art Deco style, with a panoramic loggia at the top offering stunning views over the metropolis."
+    }
+  },
+  // ── BELGIQUE ──
+  {
+    id:28, emoji:'🇧🇪', continent:'europe',
+    name:{ fr:'Boerentoren', en:'Boerentoren' },
+    city:{ fr:'Anvers', en:'Antwerp' }, country:{ fr:'Belgique', en:'Belgium' },
+    year:1932, archi:'Jos Smolderen & Jan Van Hoenacker', height:'87 m',
+    lat:51.2202, lng:4.4007,
+    wiki:'Boerentoren',
+    desc:{
+      fr:"Le Boerentoren (« tour des paysans ») est le premier gratte-ciel de Belgique et l'un des premiers d'Europe. Sa silhouette élancée en briques rouges aux lignes verticales rigoureusement Art Déco domine le centre historique d'Anvers. Siège de la KBC Bank, il a longtemps été le bâtiment le plus haut du pays et reste l'un des symboles architecturaux les plus forts de la métropole flamande.",
+      en:"The Boerentoren ('Farmers' Tower') is Belgium's first skyscraper and one of Europe's earliest. Its slender red brick silhouette with rigorous Art Deco vertical lines dominates the historic center of Antwerp. Headquarters of KBC Bank, it was long the tallest building in the country and remains one of the most powerful architectural symbols of the Flemish metropolis."
+    }
+  },
+  // ── PAYS-BAS ──
+  {
+    id:29, emoji:'🌷', continent:'europe',
+    name:{ fr:'Wolkenkrabber d\'Amsterdam', en:'Amsterdam Skyscraper' },
+    city:{ fr:'Amsterdam', en:'Amsterdam' }, country:{ fr:'Pays-Bas', en:'Netherlands' },
+    year:1932, archi:'J.F. Staal', height:'43 m',
+    lat:52.3560, lng:4.9206,
+    wiki:'Wolkenkrabber_(Amsterdam)',
+    desc:{
+      fr:"Surnommé le \"Wolkenkrabber\" (gratte-nuages), cet immeuble d'Amsterdam est le premier gratte-ciel des Pays-Bas et l'une des rares tours Art Déco du plat pays. Ses briques rouges caractéristiques de l'École d'Amsterdam se marient à une silhouette verticale et à des ornements géométriques typiquement Art Déco dans un mariage de styles réussi.",
+      en:"Nicknamed the \"Wolkenkrabber\" (cloud scraper), this Amsterdam building is the Netherlands' first skyscraper and one of the rare Art Deco towers in the flat country. Its red bricks characteristic of the Amsterdam School blend with a vertical silhouette and geometric Art Deco ornaments in a successful marriage of styles."
+    }
+  },
+  // ── ALLEMAGNE ──
+  {
+    id:30, emoji:'🇩🇪', continent:'europe',
+    name:{ fr:'Shell-Haus', en:'Shell-Haus' },
+    city:{ fr:'Berlin', en:'Berlin' }, country:{ fr:'Allemagne', en:'Germany' },
+    year:1932, archi:'Emil Fahrenkamp', height:'50 m',
+    lat:52.5087, lng:13.3681,
+    wiki:'Shell-Haus',
+    desc:{
+      fr:"Le Shell-Haus de Berlin est considéré comme l'un des chefs-d'œuvre de l'architecture Art Déco allemande. Sa façade ondulante en gradins horizontaux, unique en Europe, crée un effet de vague spectaculaire sur les rives de la Landwehrkanal. Conçu par Emil Fahrenkamp pour la compagnie Shell, il est aujourd'hui le siège du ministère fédéral de l'Économie.",
+      en:"Berlin's Shell-Haus is considered one of the masterpieces of German Art Deco architecture. Its undulating horizontally stepped facade, unique in Europe, creates a spectacular wave effect on the banks of the Landwehrkanal. Designed by Emil Fahrenkamp for the Shell company, it now serves as the headquarters of the Federal Ministry for Economic Affairs."
+    }
+  },
+  // ── AJOUTS ──
+  {
+    id:31, emoji:'🎨', continent:'europe',
+    name:{ fr:'Palais de Tokyo', en:'Palais de Tokyo' },
+    city:{ fr:'Paris', en:'Paris' }, country:{ fr:'France', en:'France' },
+    year:1937, archi:'Dondel, Aubert, Viard & Dastugue', height:null,
+    lat:48.8635, lng:2.2988,
+    wiki:'Palais_de_Tokyo',
+    desc:{
+      fr:"Construit pour l'Exposition universelle de 1937 en symétrie avec le Palais de Chaillot, le Palais de Tokyo est une œuvre majeure de l'Art Déco tardif à la française. Sa colonnade monumentale, ses sculptures de Bourdelle et ses terrasses dominant la Seine abritent aujourd'hui le site de création contemporaine le plus vaste d'Europe.",
+      en:"Built for the 1937 World's Fair in symmetry with the Palais de Chaillot, the Palais de Tokyo is a major work of late French Art Deco. Its monumental colonnade, Bourdelle sculptures and terraces overlooking the Seine now house Europe's largest site for contemporary creation."
+    }
+  },
+  {
+    id:32, emoji:'🌊', continent:'europe',
+    name:{ fr:'Palais de la Méditerranée', en:'Palais de la Méditerranée' },
+    city:{ fr:'Nice', en:'Nice' }, country:{ fr:'France', en:'France' },
+    year:1929, archi:'Charles & Michel Dalmas', height:null,
+    lat:43.6952, lng:7.2657,
+    wiki:'Palais_de_la_M%C3%A9diterran%C3%A9e',
+    desc:{
+      fr:"Joyau de la Promenade des Anglais, le Palais de la Méditerranée est l'un des plus beaux exemples d'Art Déco en France. Sa façade blanche et ses ornements géométriques dorés s'imposent face à la mer. Après une controversée démolition partielle dans les années 1990 ne conservant que la façade historique, il abrite aujourd'hui un hôtel cinq étoiles Hyatt.",
+      en:"A jewel of the Promenade des Anglais, the Palais de la Méditerranée is one of the finest examples of Art Deco in France. Its white facade and golden geometric ornaments face the sea imperiously. After a controversial partial demolition in the 1990s retaining only the historic facade, it now houses a five-star Hyatt hotel."
+    }
+  },
+  {
+    id:33, emoji:'🌴', continent:'europe',
+    name:{ fr:'Hôtel Martinez', en:'Hotel Martinez' },
+    city:{ fr:'Cannes', en:'Cannes' }, country:{ fr:'France', en:'France' },
+    year:1929, archi:'Emmanuel Niermans', height:null,
+    lat:43.5508, lng:7.0274,
+    wiki:'H%C3%B4tel_Martinez',
+    desc:{
+      fr:"L'Hôtel Martinez est le palace Art Déco le plus emblématique de la Côte d'Azur. Sa façade blanche monumentale, ses terrasses en étages et son décor intérieur aux lignes géométriques caractéristiques ont accueilli les plus grandes stars du cinéma mondial lors du Festival de Cannes depuis des décennies. Classé monument historique, il est aujourd'hui un hôtel MGallery.",
+      en:"The Hotel Martinez is the most iconic Art Deco palace on the French Riviera. Its monumental white facade, tiered terraces and geometric interior decor have hosted the world's greatest cinema stars during the Cannes Film Festival for decades. Listed as a historic monument, it is now an MGallery hotel."
+    }
+  },
+  {
+    id:34, emoji:'🏘️', continent:'europe',
+    name:{ fr:'Quartier Art Déco · Boulogne-Billancourt', en:'Art Deco Quarter · Boulogne-Billancourt' },
+    city:{ fr:'Boulogne-Billancourt', en:'Boulogne-Billancourt' }, country:{ fr:'France', en:'France' },
+    year:1930, archi:'Divers architectes', height:null,
+    lat:48.8336, lng:2.2394,
+    wiki:'H%C3%B4tel_de_ville_de_Boulogne-Billancourt', wikiLang:'fr', commonsQuery:'Hôtel de ville Boulogne-Billancourt Tony Garnier art déco façade',
+    desc:{
+      fr:"Boulogne-Billancourt concentre la plus grande densité d'immeubles Art Déco de France après Paris, fruit de l'expansion industrielle rapide des années 1930 portée par Renault et l'aviation. Ses rues recèlent des centaines de façades ornées de motifs géométriques, de céramiques polychromes et de ferronneries ouvragées qui forment un ensemble cohérent classé remarquable.",
+      en:"Boulogne-Billancourt contains the highest density of Art Deco buildings in France outside Paris, the result of rapid industrial expansion in the 1930s driven by Renault and aviation. Its streets contain hundreds of facades adorned with geometric motifs, polychrome ceramics and wrought ironwork that form a cohesive ensemble of remarkable heritage value."
+    }
+  },
+  {
+    id:35, emoji:'🌴', continent:'americas',
+    name:{ fr:'Colony Hotel', en:'Colony Hotel' },
+    city:{ fr:'Miami Beach', en:'Miami Beach' }, country:{ fr:'États-Unis', en:'United States' },
+    year:1935, archi:'Henry Hohauser', height:null,
+    lat:25.7815, lng:-80.1301,
+    wiki:'Colony_Hotel_(Miami_Beach)',
+    desc:{
+      fr:"Le Colony Hotel est l'icône absolue d'Ocean Drive et de l'Art Déco tropical de Miami Beach. Sa façade blanche ornée d'un néon vertical bleu et de son porche caractéristique en a fait le symbole photographié de South Beach. Conçu par Henry Hohauser, architecte prolifique du quartier, il incarne parfaitement le style Streamline Moderne américain des années 1930.",
+      en:"The Colony Hotel is the absolute icon of Ocean Drive and Miami Beach's tropical Art Deco. Its white facade adorned with a vertical blue neon sign and characteristic porch has made it the most photographed symbol of South Beach. Designed by Henry Hohauser, the neighborhood's most prolific architect, it perfectly embodies the American Streamline Moderne style of the 1930s."
+    }
+  },
+  {
+    id:36, emoji:'🌊', continent:'americas',
+    name:{ fr:'Breakwater Hotel', en:'Breakwater Hotel' },
+    city:{ fr:'Miami Beach', en:'Miami Beach' }, country:{ fr:'États-Unis', en:'United States' },
+    year:1939, archi:'Anton Skislewicz', height:null,
+    lat:25.7793, lng:-80.1300,
+    wiki:'Breakwater_Hotel,_Miami_Beach',
+    desc:{
+      fr:"Le Breakwater Hotel est l'un des exemples les plus purs du style Streamline Moderne sur Ocean Drive. Sa tour centrale verticale flanquée d'ailettes horizontales bleues et blanches évoque la proue d'un paquebot fendant les flots — métaphore navale typique de l'Art Déco tropical floridien. Son enseigne lumineuse verticale est devenue l'une des images les plus reproduites de Miami Beach.",
+      en:"The Breakwater Hotel is one of the purest examples of Streamline Moderne style on Ocean Drive. Its central vertical tower flanked by blue and white horizontal fins evokes the prow of an ocean liner cutting through the waves — a naval metaphor typical of Florida's tropical Art Deco. Its vertical illuminated sign has become one of the most reproduced images of Miami Beach."
+    }
+  },
+  {
+    id:37, emoji:'🏖️', continent:'americas',
+    name:{ fr:'McAlpin Hotel', en:'McAlpin Hotel' },
+    city:{ fr:'Miami Beach', en:'Miami Beach' }, country:{ fr:'États-Unis', en:'United States' },
+    year:1940, archi:'L. Murray Dixon', height:null,
+    lat:25.7808, lng:-80.1302,
+    wiki:'McAlpin_Hotel,_Miami_Beach',
+    desc:{
+      fr:"Le McAlpin Hotel, conçu par L. Murray Dixon — l'autre grand architecte Art Déco de Miami Beach avec Henry Hohauser — illustre la maîtrise du style Streamline dans toute sa rigueur géométrique. Sa façade sobre aux bandes horizontales en relief, sa marquise caractéristique et ses détails en chrome en font un témoignage essentiel de l'architecture balnéaire des années 1940.",
+      en:"The McAlpin Hotel, designed by L. Murray Dixon — the other great Art Deco architect of Miami Beach alongside Henry Hohauser — illustrates mastery of the Streamline style in all its geometric rigor. Its sober facade with raised horizontal bands, characteristic marquee and chrome details make it an essential testimony to seaside architecture of the 1940s."
+    }
+  },
+  {
+    id:38, emoji:'🎷', continent:'americas',
+    name:{ fr:'Essex House Hotel', en:'Essex House Hotel' },
+    city:{ fr:'Miami Beach', en:'Miami Beach' }, country:{ fr:'États-Unis', en:'United States' },
+    year:1938, archi:'Henry Hohauser', height:null,
+    lat:25.7820, lng:-80.1299,
+    wiki:'Essex_House_Hotel_(Miami_Beach)',
+    desc:{
+      fr:"L'Essex House Hotel est l'un des joyaux les moins connus mais les plus raffinés du patrimoine Art Déco de Collins Avenue. Henry Hohauser y a déployé ses ornements Art Déco les plus élaborés : bas-reliefs géométriques, vitraux de couleur, garde-corps en fer forgé et intérieurs d'une richesse exceptionnelle. Entièrement restauré, il figure parmi les hôtels les mieux préservés de South Beach.",
+      en:"The Essex House Hotel is one of the least known but most refined jewels of Collins Avenue's Art Deco heritage. Henry Hohauser deployed his most elaborate Art Deco ornaments here: geometric bas-reliefs, stained glass windows, wrought iron railings and exceptionally rich interiors. Fully restored, it ranks among South Beach's best-preserved hotels."
+    }
+  },
+];
+
+const CONTINENTS = {
+  all:    { fr:'Tous', en:'All' },
+  americas:{ fr:'Amériques', en:'Americas' },
+  europe: { fr:'Europe', en:'Europe' },
+  asia:   { fr:'Asie', en:'Asia' },
+  oceania:{ fr:'Océanie', en:'Oceania' },
+  africa: { fr:'Afrique', en:'Africa' },
+};
+
+// ═══════════════ IMAGE CACHE ═══════════════
+const IMG_CACHE_VERSION = 'artdeco_v8_';
+const IMG_CACHE_DAYS = 7;
+
+function getCachedImg(key) {
+  const k = IMG_CACHE_VERSION + key;
+  try {
+    const raw = localStorage.getItem(k);
+    if (!raw) return null;
+    const { url, ts } = JSON.parse(raw);
+    if (Date.now() - ts > IMG_CACHE_DAYS * 864e5) { localStorage.removeItem(k); return null; }
+    return url;
+  } catch { return null; }
+}
+
+function setCachedImg(key, url) {
+  try { localStorage.setItem(IMG_CACHE_VERSION + key, JSON.stringify({ url, ts: Date.now() })); } catch {}
+}
+
+async function wikiPageImg(slug, lang, size) {
+  try {
+    const u = `https://${lang}.wikipedia.org/w/api.php?action=query&titles=${slug}&prop=pageimages&piprop=thumbnail&pithumbsize=${size}&redirects&format=json&origin=*`;
+    const d = await (await fetch(u)).json();
+    const p = Object.values(d?.query?.pages || {})[0];
+    if (p && p.missing === undefined && p.thumbnail?.source) return p.thumbnail.source;
+    return null;
+  } catch { return null; }
+}
+
+async function commonsSearch(query, size) {
+  try {
+    // Search Commons for photos of the building
+    const u = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrnamespace=6&gsrlimit=8&prop=imageinfo&iiprop=url&iiurlwidth=${size}&format=json&origin=*`;
+    const d = await (await fetch(u)).json();
+    const pages = Object.values(d?.query?.pages || {});
+    for (const p of pages) {
+      const url = p?.imageinfo?.[0]?.thumburl;
+      // Only accept JPEGs (real photos, not SVG diagrams)
+      if (url && /\.jpe?g/i.test(url)) return url;
+    }
+    return null;
+  } catch { return null; }
+}
+
+async function fetchWikiImg(b, size = 400) {
+  const cacheKey = b.wiki + (b.wikiLang || 'en');
+  const cached = getCachedImg(cacheKey);
+  if (cached && cached !== '__none__') return cached;
+  if (cached === '__none__') return null;
+
+  const lang = b.wikiLang || 'en';
+
+  // Step 1: Wikipedia pageimages (lead photo)
+  const slugs = [b.wiki, ...(b.wikiFallback || [])];
+  for (const slug of slugs) {
+    const url = await wikiPageImg(slug, lang, size);
+    if (url) { setCachedImg(cacheKey, url); return url; }
+  }
+
+  // Step 2: Commons full-text search by building name + city
+  const query = b.commonsQuery || `${b.name.en} ${b.city.en} building`;
+  const url2 = await commonsSearch(query, size);
+  if (url2) { setCachedImg(cacheKey, url2); return url2; }
+
+  setCachedImg(cacheKey, '__none__');
+  return null;
+}
+
+// ═══════════════ LISTE ═══════════════
+let activeContinent = 'all';
+
+function renderFilterBar() {
+  const bar = document.getElementById('filter-bar');
+  bar.innerHTML = Object.entries(CONTINENTS).map(([k, v]) =>
+    `<button class="filter-chip ${k === activeContinent ? 'active' : ''}" onclick="setContinent('${k}')">${t(v)}</button>`
+  ).join('');
+}
+
+function setContinent(c) {
+  activeContinent = c;
+  renderFilterBar();
+  renderList();
+}
+
+function filteredBuildings() {
+  if (activeContinent === 'all') return BUILDINGS;
+  return BUILDINGS.filter(b => b.continent === activeContinent);
+}
+
+function renderList() {
+  renderFilterBar();
+  const container = document.getElementById('list-container');
+  const list = filteredBuildings();
+  container.innerHTML = list.map(b => `
+    <div class="building-card" onclick="openDetail(${b.id})">
+      <div class="card-img-placeholder" id="thumb-${b.id}">${b.emoji}</div>
+      <div class="card-info">
+        <div class="card-name">${t(b.name)}</div>
+        <div class="card-city">${t(b.city)} · ${t(b.country)}</div>
+        <div class="card-year">${b.year}${b.archi ? ' · ' + b.archi : ''}</div>
+      </div>
+      <div class="card-chevron">›</div>
+    </div>
+  `).join('');
+
+  // Lazy-load thumbnails
+  list.forEach(b => {
+    fetchWikiImg(b, 200).then(url => {
+      if (!url || url === '__none__') return;
+      const el = document.getElementById('thumb-' + b.id);
+      if (el) {
+        const img = document.createElement('img');
+        img.className = 'card-img'; img.src = url; img.alt = t(b.name);
+        el.replaceWith(img);
+      }
+    });
+  });
+}
+
+// ═══════════════ DETAIL ═══════════════
+let currentDetail = null;
+
+async function openDetail(id) {
+  const b = BUILDINGS.find(x => x.id === id);
+  if (!b) return;
+  currentDetail = id;
+
+  document.getElementById('detail-title').textContent = t(b.name).toUpperCase();
+
+  // Hero
+  const heroWrap = document.getElementById('detail-hero-wrap');
+  heroWrap.innerHTML = `<div class="detail-hero-placeholder" id="hero-ph">${b.emoji}</div>`;
+  fetchWikiImg(b, 800).then(url => {
+    if (!url || url === '__none__') return;
+    const ph = document.getElementById('hero-ph');
+    if (ph) {
+      const img = document.createElement('img');
+      img.id = 'detail-hero'; img.src = url; img.alt = t(b.name);
+      ph.replaceWith(img);
+    }
+  });
+
+  // Body
+  const metaYear = lang === 'fr' ? 'Année' : 'Year';
+  const metaArchi = lang === 'fr' ? 'Architecte' : 'Architect';
+  const metaHaut = lang === 'fr' ? 'Hauteur' : 'Height';
+  const metaPays = lang === 'fr' ? 'Pays' : 'Country';
+  const wikiLabel = lang === 'fr' ? 'Voir sur Wikipédia' : 'View on Wikipedia';
+
+  document.getElementById('detail-body').innerHTML = `
+    <div class="detail-building-name">${t(b.name)}</div>
+    <div class="detail-location">${t(b.city)} · ${t(b.country)}</div>
+    <div class="detail-meta-grid">
+      <div class="meta-item"><div class="meta-label">${metaYear}</div><div class="meta-value">${b.year}</div></div>
+      <div class="meta-item"><div class="meta-label">${metaPays}</div><div class="meta-value">${t(b.country)}</div></div>
+      ${b.archi ? `<div class="meta-item" style="grid-column:1/-1"><div class="meta-label">${metaArchi}</div><div class="meta-value">${b.archi}</div></div>` : ''}
+      ${b.height ? `<div class="meta-item"><div class="meta-label">${metaHaut}</div><div class="meta-value">${b.height}</div></div>` : ''}
+    </div>
+    <div class="detail-divider"></div>
+    <div class="detail-desc">${t(b.desc)}</div>
+    <div onclick="window.open('https://fr.wikipedia.org/wiki/${b.wiki}','_system')" class="wiki-btn">
+      <span>📖</span><span>${wikiLabel}</span>
+    </div>
+  `;
+
+  document.getElementById('detail-overlay').classList.add('open');
+  document.getElementById('detail-scroll').scrollTop = 0;
+}
+
+function closeDetail() {
+  document.getElementById('detail-overlay').classList.remove('open');
+  currentDetail = null;
+}
+
+// ═══════════════ CARTE ═══════════════
+let mapInited = false;
+let leafletMap = null;
+
+function initMap() {
+  if (mapInited) return;
+  mapInited = true;
+  setTimeout(() => {
+    leafletMap = L.map('map', { zoomControl: true }).setView([20, 0], 2);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© CartoDB', maxZoom: 18
+    }).addTo(leafletMap);
+
+    const goldIcon = L.divIcon({
+      className: '',
+      html: `<div style="width:28px;height:28px;background:#c9a84c;border-radius:50%;border:2px solid #e8c96a;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 0 8px rgba(201,168,76,.5)"></div>`,
+      iconSize: [28, 28], iconAnchor: [14, 14]
+    });
+
+    BUILDINGS.forEach(b => {
+      const marker = L.marker([b.lat, b.lng], { icon: goldIcon }).addTo(leafletMap);
+      marker.bindPopup(`
+        <div class="popup-name">${b.name.fr}</div>
+        <div class="popup-sub">${b.city.fr} · ${b.year}</div>
+        <div class="popup-link" onclick="switchTab('liste');openDetail(${b.id})">→ ${lang==='fr'?'Voir le détail':'View detail'}</div>
+      `);
+    });
+  }, 100);
+}
+
+// ═══════════════ QUIZ ═══════════════
+let quizData = { questions:[], current:0, score:0, answered:false };
+
+function initQuiz() {
+  const shuffled = [...BUILDINGS].sort(() => Math.random() - .5).slice(0, 10);
+  quizData = { questions: shuffled, current: 0, score: 0, answered: false };
+  renderQuiz();
+}
+
+function renderQuiz() {
+  const panel = document.getElementById('quiz-panel');
+  const { questions, current, score } = quizData;
+
+  if (current >= questions.length) {
+    const pct = Math.round(score / questions.length * 100);
+    const emoji = pct >= 80 ? '🏆' : pct >= 50 ? '🎭' : '📚';
+    const msg = lang === 'fr'
+      ? (pct >= 80 ? 'Vous êtes un véritable connaisseur de l\'Art Déco !' : pct >= 50 ? 'Bonne connaissance de l\'architecture !' : 'Continuez à explorer ce beau patrimoine !')
+      : (pct >= 80 ? 'You are a true Art Deco connoisseur!' : pct >= 50 ? 'Good knowledge of architecture!' : 'Keep exploring this beautiful heritage!');
+    const lbl = lang === 'fr' ? 'Score' : 'Score';
+    const restart = lang === 'fr' ? 'Recommencer' : 'Try Again';
+    panel.innerHTML = `
+      <div class="quiz-result visible">
+        <div class="quiz-result-emoji">${emoji}</div>
+        <div class="quiz-result-score">${score}/${questions.length}</div>
+        <div class="quiz-result-label">${lbl}</div>
+        <div class="quiz-result-msg">${msg}</div>
+        <button class="quiz-restart" onclick="initQuiz()">${restart}</button>
+      </div>`;
+    return;
+  }
+
+  const b = questions[current];
+  const others = BUILDINGS.filter(x => x.id !== b.id).sort(() => Math.random() - .5).slice(0, 3);
+  const options = [...others, b].sort(() => Math.random() - .5);
+  const qLabel = lang === 'fr' ? 'Quel est ce bâtiment ?' : 'Which building is this?';
+  const hintCity = lang === 'fr' ? `Construit en ${b.year} · ${t(b.city)}, ${t(b.country)}` : `Built in ${b.year} · ${t(b.city)}, ${t(b.country)}`;
+  const nextLabel = lang === 'fr' ? 'Question suivante →' : 'Next question →';
+  const progress = `${current + 1}/${questions.length}`;
+  const pctW = Math.round(current / questions.length * 100);
+
+  panel.innerHTML = `
+    <div class="quiz-score-bar">
+      <span class="quiz-score-label">${lang==='fr'?'Score':'Score'}</span>
+      <span class="quiz-score-num">${score} · ${progress}</span>
+    </div>
+    <div class="quiz-progress"><div class="quiz-progress-fill" style="width:${pctW}%"></div></div>
+    <div class="quiz-question-img-placeholder" id="quiz-img-ph">${b.emoji}</div>
+    <div class="quiz-question">${qLabel}</div>
+    <div class="quiz-hint">${hintCity}</div>
+    <div class="quiz-options">
+      ${options.map(o => `
+        <button class="quiz-option" onclick="answerQuiz(${o.id},${b.id},this)">${t(o.name)}</button>
+      `).join('')}
+    </div>
+    <button class="quiz-next-btn" id="quiz-next" onclick="nextQuiz()">${nextLabel}</button>
+  `;
+
+  fetchWikiImg(b, 600).then(url => {
+    if (!url || url === '__none__') return;
+    const ph = document.getElementById('quiz-img-ph');
+    if (ph) {
+      const img = document.createElement('img');
+      img.className = 'quiz-question-img'; img.src = url; img.alt = t(b.name);
+      ph.replaceWith(img);
+    }
+  });
+}
+
+function answerQuiz(chosen, correct, btn) {
+  if (quizData.answered) return;
+  quizData.answered = true;
+  const isRight = chosen === correct;
+  if (isRight) { quizData.score++; btn.classList.add('correct'); }
+  else {
+    btn.classList.add('wrong');
+    document.querySelectorAll('.quiz-option').forEach(b => {
+      const id = parseInt(b.getAttribute('onclick').match(/answerQuiz\((\d+)/)?.[1] || 0);
+      // find the button whose text matches the correct building
+    });
+    // highlight correct
+    document.querySelectorAll('.quiz-option').forEach(b => {
+      if (b.textContent.trim() === t(BUILDINGS.find(x=>x.id===correct).name)) b.classList.add('correct');
+    });
+  }
+  document.querySelectorAll('.quiz-option').forEach(b => b.disabled = true);
+  document.getElementById('quiz-next').classList.add('visible');
+}
+
+function nextQuiz() {
+  quizData.current++;
+  quizData.answered = false;
+  renderQuiz();
+}
+
+// ═══════════════ TABS ═══════════════
+function switchTab(tab) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+  if (tab === 'carte') initMap();
+  if (tab === 'quiz') { if (!quizData.questions.length) initQuiz(); }
+}
+
+// ═══════════════ SETTINGS ═══════════════
+function openSettings() {
+  const content = document.getElementById('settings-content');
+  const appLabel = lang === 'fr' ? 'Nos autres applications' : 'Our other apps';
+  const others = MGA_CONFIG.apps.filter(a => a.id !== MGA_CONFIG.appCourante);
+  content.innerHTML = `
+    <div class="settings-section-title">${appLabel}</div>
+    ${others.map(a => `
+      <div class="settings-app-row" onclick="window.open('${a.store}','_system')">
+        <div class="settings-app-icon">${a.icon}</div>
+        <div>
+          <div class="settings-app-name">${lang==='fr'?a.fr:a.en}</div>
+          <div class="settings-app-store">App Store →</div>
+        </div>
+      </div>
+    `).join('')}
+  `;
+  document.getElementById('settings-overlay').classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('settings-overlay').classList.remove('open');
+}
+
+// ═══════════════ INIT ═══════════════
+applyLang();
+renderList();
+</script>
+</body>
+</html>
